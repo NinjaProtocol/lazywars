@@ -1,10 +1,10 @@
-# LazyWars
+# lazywars beta v0.1
 
-The laziest dApp on Solana - A mobile game featuring OFModels management, resource collection, and player progression.
+The laziest dApp on Solana - A mobile game based on the classic pimpwars.
 
 ## Overview
 
-LazyWars is a Solana mobile dApp with a comprehensive backend featuring game mechanics for OFModels management, resource collection, and player progression. Players manage their digital empire while competing in a lazy-themed ecosystem.
+LazyWars is a Solana mobile dApp with a comprehensive backend featuring game mechanics for resource management, inventory management, and player progression. Players compete in a scarcity driven environment competing to be the laziest there is.
 
 ## Game Features
 
@@ -23,11 +23,14 @@ LazyWars is a Solana mobile dApp with a comprehensive backend featuring game mec
 - **Experience Points**: Progression currency for leveling up
 
 ### Inventory Items
-- NFT Costumes (protective gear)
-- Gym Memberships (fitness items)
-- Premium consumables
-- Various equipment and vehicles
-- Entertainment items
+- NFT Costumes
+- Gym Memberships (cures fatness)
+- Moutai
+- Sig P365
+- Beretta 1301
+- VectorSMG
+- Boombox 8.6 BLK
+- Cybertruck
 
 ## Game Systems
 
@@ -35,7 +38,7 @@ LazyWars is a Solana mobile dApp with a comprehensive backend featuring game mec
 - OFModels generate hourly income based on happiness levels
 - Payout percentages affect overall income
 - Happiness thresholds determine performance and risk
-- Protective items and minion ratios provide happiness bonuses
+- Items and minion ratios provide happiness bonuses
 
 ### Happiness System
 - OFModels happiness affects income and desertion risk
@@ -87,11 +90,11 @@ LazyWars is a Solana mobile dApp with a comprehensive backend featuring game mec
 
 ### 🚧 In Development
 - Enhanced happiness interaction systems
-- Advanced gameplay mechanics
-- Additional inventory item effects
+- Attack/Defense mechanics
+- Research mechanics(?)
 
 ### 🔄 Planned Features
-- Expanded combat mechanics
+- Expanded leaderboards/analytics
 - Enhanced social features
 - Additional cities and locations
 - More complex item interactions
@@ -106,4 +109,4 @@ LazyWars is a Solana mobile dApp with a comprehensive backend featuring game mec
 
 ---
 
-*LazyWars - Where being lazy is a competitive advantage!*
+*lazywars - to be the laziest is the greatest*
