@@ -56,11 +56,12 @@ LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase,
 - `last_turns_regen_at` (TIMESTAMPTZ) - Turn regeneration tracking
 - `last_minions_decay_at` (TIMESTAMPTZ) - Minions happiness decay tracking  
 - `last_desertion_check_at` (TIMESTAMPTZ) - Desertion risk processing tracking
+- `grow_upgrade_level` (INTEGER, 1-10, default: 1) - Grow facility upgrade level
 
 ### Support Table: `lazywars_purchase_history`
 - `id` (UUID, PK)
 - `wallet_address` (TEXT, FK to profiles)
-- `item_name` (TEXT) - Name of purchased item
+- `item_name` (TEXT) - Name of purchased item (includes "Grow Upgrade: [Name]")
 - `quantity` (INTEGER, >0) - Amount purchased
 - `unit_cost` (INTEGER, >0) - Cost per unit
 - `total_cost` (INTEGER, >0) - Total transaction cost
@@ -81,7 +82,8 @@ LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase,
 - Minion ratio provides happiness boost (+5 per ratio point, max +25)
 - Fatness penalty reduces happiness by 20%
 
-### 2. Complete Happiness System ✅ IMPLEMENTED
+### 2. Complete Happiness System
+**Status: ✅ FULLY IMPLEMENTED**
 **OFModels Happiness (0-100%):**
 - **Formula:** 50 + payout_boost + nft_costumes_boost + minion_ratio_boost - fatness_penalty
 - **Payout boost:** (payout_pct - 40) / 2 (60% payout = +10% happiness)
@@ -109,12 +111,14 @@ LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase,
 - **Auto-updates:** Happiness recalculated in scout/grow/cure actions
 
 ### 3. Turns System
-- **Maximum:** 100 turns (schema constraint updated from 200)
+- **Maximum:** 200 turns (schema constraint verified and deployed ✅)
 - **Regeneration:** +2 turns every 10 minutes (cron job)
 - **Usage:** Scouting (yield affected by happiness), Growing (desertion risk)
 - **Tracking:** `last_turns_regen_at` timestamp for efficiency
+- **Migration:** `fix-turns-constraint-200.sql` ensures consistent 200 limit across all environments
 
-### 4. Experience & Leveling System ✅ IMPLEMENTED
+### 4. Experience & Leveling System
+**Status: ✅ FULLY IMPLEMENTED**
 **Level Thresholds & Titles:**
 - Level 1: "Stake Slacker" (0 EXP)
 - Level 2: "Node Napper" (100 EXP)
@@ -129,7 +133,7 @@ LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase,
 
 **EXP Sources:**
 - Scouting: 1 EXP per turn spent
-- Growing: 2 EXP per turn spent (higher reward)
+- Growing: 1 EXP per turn spent (same rate as scouting)
 - Future actions: Combat, quests, achievements
 
 **Level Up Mechanics:**
@@ -138,7 +142,35 @@ LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase,
 - Level up notifications included in action responses
 - Progress tracking available via `get_exp_progress()` function
 
-### 5. Lazy Score Calculation
+### 5. Weed Growing System
+**Status: ✅ FULLY IMPLEMENTED**
+**Core Mechanics:**
+- **Yield Formula:** `minions × (1 + rng_adjustment)` rounded down
+- **RNG Adjustment:** 0-1 random value (average +0.5 = 1.5× multiplier)
+- **Base Rate:** 1 weed per minion (100 minions = 100-200 weed yield)
+
+**Efficiency Scaling:**
+- **15-20 turns:** Optimal efficiency (no penalty)
+- **<15 turns:** 30% efficiency penalty (inefficient small batches)
+- **>20 turns:** No additional bonus (diminishing returns)
+
+**Happiness Impact:**
+- **≥70% minion happiness:** Full yield
+- **<70% minion happiness:** 50% yield reduction
+- **Desertion risk:** 10% chance to lose 1-5 minions if unhappy
+
+**EXP Rewards:**
+- **1 EXP per turn spent** (same rate as scouting)
+
+**Grow Upgrades System:**
+- **Status: ✅ FULLY IMPLEMENTED**
+- **10 upgrade levels** from "Backyard Grow-Op" (0% bonus) to "Cosmic Kush Kingdom" (100% bonus)
+- **Yield bonuses** applied AFTER base calculation but BEFORE database update
+- **Requirements:** EXP thresholds + credit costs (Level 2: 0 EXP, 750 credits → Level 10: 250k EXP, 100k credits)
+- **Purchase tracking:** All upgrades recorded in `lazywars_purchase_history` table
+- **Backend functions:** `get_grow_upgrade_config()`, `get_player_grow_upgrade_info()`, `upgrade_grow_facility()`
+
+### 6. Lazy Score Calculation
 ```sql
 lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
 ```
@@ -162,18 +194,18 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
    - Desertion risk during scouting
    - Real-time happiness calculation and updates
    - **✅ Automatic EXP and level up processing (1 EXP per turn)**
-3. **`grow`** - ✅ Weed growing with happiness integration  
-   - Minion assistance bonus (10% per minion)
-   - Happiness multiplier for minions productivity
-   - Desertion risk during growing (10% chance if unhappy)
-   - Farm equipment bonuses
-   - **✅ Automatic EXP and level up processing (2 EXP per turn)**
+3. **`grow`** - ✅ Weed growing with minion-based yield system
+   - **Yield formula:** `minions × (1 + rng_adjustment)` (1-2 weed per minion)
+   - **Efficiency scaling:** <15 turns = 30% penalty, 15+ turns = optimal
+   - **Minion happiness affects yield:** <70% happiness = 50% reduction
+   - **Desertion risk:** 10% chance if minions unhappy, lose 1-5 minions
+   - **✅ Automatic EXP and level up processing (1 EXP per turn)**
 4. **`upgrade-farm`** - Farm equipment upgrades
-5. **`cure-fatness`** - ✅ Remove fatness penalty using gym membership
+6. **`cure-fatness`** - ✅ Remove fatness penalty using gym membership
    - Costs 1 gym_membership
    - Removes `is_fat` status
    - Auto-recalculates happiness after cure
-6. **`add-exp`** - ✅ Manual EXP addition with level up checks
+7. **`add-exp`** - ✅ Manual EXP addition with level up checks
    - Admin/special event EXP rewards
    - Automatic level and title updates
    - Level up notifications
@@ -191,27 +223,39 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
   - Happiness multipliers for yield calculation
   - Risk assessment based on happiness levels
   - Real-time happiness updates
-- `grow_weed(turns_spent, wallet_address)` - ✅ Weed growing with happiness integration
-  - Minion assistance bonuses
-  - Desertion risk during growing
-  - Farm equipment bonuses
+- `grow_weed(turns_spent, wallet_address)` - ✅ Weed growing with minion-based yield system + upgrade bonuses
+  - Yield formula: minions × (1 + rng_adjustment) × upgrade_multiplier
+  - Efficiency scaling for batch sizes (15+ turns optimal)
+  - Minion happiness affects productivity
+  - Desertion risk management
+  - **✅ Upgrade bonus integration:** Applied after base calculation but before database update
 - `upgrade_farm(upgrade_type, wallet_address)` - Farm upgrades
 
-### ✅ Complete Happiness System Functions
+### Complete Happiness System Functions
+**Status: ✅ IMPLEMENTED**
 - `calculate_complete_happiness(ofmodels, minions, payout_pct, nft_costumes, is_fat, moutai, weapons_total)` - Core happiness calculation for both systems
 - `update_happiness(wallet_address)` - Update and store happiness for a player
 - `check_desertion_risk(ofmodels_happiness, minions_happiness, ofmodels, minions)` - Check desertion risk and calculate losses
 - `cure_fatness(wallet_address)` - Cure fatness using gym membership (costs 1, removes penalty)
 
-### ✅ EXP and Leveling Functions
+### EXP and Leveling Functions
+**Status: ✅ IMPLEMENTED**
 - `add_exp(wallet_address, exp_amount)` - Add EXP and automatically check for level up with title update
 - `get_exp_progress(wallet_address)` - Get detailed level progress information for frontend
 - `get_title_from_level(level)` - Get player title based on level
 - `calculate_level_from_exp(exp)` - Calculate level from EXP amount (existing function)
 
+### Grow Upgrades System Functions
+**Status: ✅ IMPLEMENTED**
+- `get_grow_upgrade_config(upgrade_level)` - Get upgrade configuration for specific level (name, cost, EXP req, yield bonus)
+- `get_player_grow_upgrade_info(wallet_address)` - Get current upgrade level, next upgrade info, and upgrade eligibility
+- `upgrade_grow_facility(wallet_address)` - Purchase next upgrade level with validation and purchase tracking
+
 ### Analytics Functions
 - `get_total_credits_spent(wallet_address)` - Purchase analytics
 - `get_player_purchase_stats(wallet_address)` - Detailed purchase stats
+- `get_upgrade_purchase_history(wallet_address)` - ✅ Upgrade-specific purchase history
+- `get_total_upgrade_spending(wallet_address)` - ✅ Total credits spent on upgrades
 
 ## Database Triggers
 
@@ -240,7 +284,7 @@ OFMODELS_CONSTANTS = {
   FATNESS_PENALTY: 20,
   TURNS_REGEN_AMOUNT: 2,
   TURNS_REGEN_INTERVAL_MINUTES: 10,
-  MAX_TURNS: 100,
+  MAX_TURNS: 200,
 }
 
 MINIONS_CONSTANTS = {
@@ -251,6 +295,24 @@ MINIONS_CONSTANTS = {
   MAX_DESERTION_LOSS: 5,
   MOUTAI_DEFICIT_PENALTY: 1, // -1% per missing
   WEAPONS_DEFICIT_PENALTY: 1, // -1% per missing
+}
+
+GROW_UPGRADE_CONSTANTS = {
+  MAX_LEVEL: 10,
+  MIN_LEVEL: 1,
+  YIELD_BONUSES: [0, 5, 10, 20, 30, 40, 55, 70, 85, 100], // % bonuses by level
+  UPGRADE_NAMES: [
+    "Backyard Grow-Op",
+    "Closet Kush Corner", 
+    "Basement Bud Bunker",
+    "Garage Ganja Garden",
+    "Attic Herb Haven",
+    "Warehouse Weed Wonderland",
+    "Industrial Dank Depot",
+    "Mega Mary Jane Manor",
+    "Epic Endo Empire",
+    "Cosmic Kush Kingdom"
+  ]
 }
 ```
 
@@ -269,9 +331,10 @@ MINIONS_CONSTANTS = {
 - **✅ OFModels income generation with happiness mechanics**
 - **✅ Turns regeneration system with proper tracking**
 - **✅ Scouting mechanics with happiness-based yields and risk**
-- **✅ Weed growing with minion assistance and happiness effects**
-- **✅ Purchase system with analytics**
+- **✅ Weed growing with minion-based yield system + upgrade bonuses**
+- **✅ Purchase system with analytics + upgrade purchase tracking**
 - **✅ Lazy score calculation and rankings**
+- **✅ Grow upgrades system with 10 levels and yield bonuses**
 
 ### ⚠️ Partially Implemented
 - Attack/defense mechanics (basic framework exists)
@@ -297,6 +360,11 @@ supabase/
 ├── update-grow-with-happiness.sql      # ✅ Updated grow integration
 ├── add-exp-title-system.sql            # ✅ EXP and titles system
 ├── update-scout-grow-with-exp-system.sql # ✅ Scout/grow with automatic level ups
+├── fix-grow-to-original-spec.sql       # ✅ Corrected grow mechanics to match specification
+├── add-grow-upgrades-system.sql        # ✅ Grow upgrades system (10 levels, yield bonuses)
+├── update-grow-with-upgrades.sql       # ✅ Updated grow function with upgrade integration
+├── update-grow-upgrades-with-tracking.sql # ✅ Enhanced upgrade system with purchase tracking
+├── fix-turns-constraint-200.sql        # ✅ Ensure consistent 200 turns limit across environments
 ├── functions/
 │   ├── hourly-income/index.ts          # Income generation
 │   ├── happiness-decay/index.ts        # ✅ Complete happiness processing
@@ -311,13 +379,20 @@ supabase/
 ```
 
 ## Next Implementation Priorities
-1. ✅ **COMPLETED:** Complete happiness system implementation
-2. ✅ **COMPLETED:** Minions happiness mechanics with decay and desertion  
-3. ✅ **COMPLETED:** Happiness integration in game actions (scout/grow)
-4. ✅ **COMPLETED:** Fatness cure system with gym memberships
-5. ✅ **COMPLETED:** Automated happiness processing via cron jobs
-6. ✅ **COMPLETED:** EXP and Titles system with automatic level ups
-7. Advanced combat mechanics with happiness effects on battle outcomes
-8. Social features and player interactions
-9. Achievement and quest systems with EXP rewards
-10. Leaderboards with title-based rankings
+
+### ✅ COMPLETED SYSTEMS:
+1. Complete happiness system implementation
+2. Minions happiness mechanics with decay and desertion  
+3. Happiness integration in game actions (scout/grow)
+4. Fatness cure system with gym memberships
+5. Automated happiness processing via cron jobs
+6. EXP and Titles system with automatic level ups
+7. Grow upgrades system with 10 levels and yield bonuses
+8. Purchase tracking integration for upgrades
+9. Turns constraint consistency fix (200 max across all environments)
+
+### 🔄 NEXT PRIORITIES:
+1. Advanced combat mechanics with happiness effects on battle outcomes
+2. Social features and player interactions
+3. Achievement and quest systems with EXP rewards
+4. Leaderboards with title-based rankings
