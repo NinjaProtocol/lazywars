@@ -87,9 +87,11 @@ LazyWars is a Solana mobile dApp with a comprehensive backend featuring game mec
 - Purchase system with analytics
 - Level progression
 - Player rankings
+- Enhanced happiness interaction systems
+- Exp and titles system
 
 ### 🚧 In Development
-- Enhanced happiness interaction systems
+
 - Attack/Defense mechanics
 - Research mechanics(?)
 
