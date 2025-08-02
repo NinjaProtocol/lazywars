@@ -57,6 +57,10 @@ LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase,
 - `last_minions_decay_at` (TIMESTAMPTZ) - Minions happiness decay tracking  
 - `last_desertion_check_at` (TIMESTAMPTZ) - Desertion risk processing tracking
 - `grow_upgrade_level` (INTEGER, 1-10, default: 1) - Grow facility upgrade level
+- `empire_id` (TEXT, FK to empires) - Reference to current Empire
+- `empire_attack_bonus` (INTEGER, ≥0, default: 0) - Combat bonus from Empire thugs
+- `empire_defense_bonus` (INTEGER, ≥0, default: 0) - Combat bonus from Empire thugs
+- `last_dues_payment_at` (TIMESTAMPTZ) - Dues collection tracking
 
 ### Support Table: `lazywars_purchase_history`
 - `id` (UUID, PK)
@@ -66,6 +70,47 @@ LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase,
 - `unit_cost` (INTEGER, >0) - Cost per unit
 - `total_cost` (INTEGER, >0) - Total transaction cost
 - `purchased_at` (TIMESTAMPTZ) - Purchase timestamp
+
+### Empire System Tables ✅
+
+#### `lazywars_empires`
+- `id` (TEXT, PK) - Empire identifier
+- `name` (TEXT, 3-30 chars, UNIQUE) - Empire name
+- `leader_wallet_address` (TEXT, FK to profiles) - Empire leader
+- `description` (TEXT, optional, max 200 chars) - Empire description
+- `dues_rate` (INTEGER, 0-50, default: 0) - Member dues percentage
+- `treasury_credits` (INTEGER, ≥0, default: 0) - Shared treasury
+- `offensive_thugs` (INTEGER, ≥0, default: 0) - Attack bonuses
+- `defensive_thugs` (INTEGER, ≥0, default: 0) - Defense bonuses
+- `empire_score` (INTEGER, ≥0, default: 0) - Sum of member lazy_scores
+- `member_count` (INTEGER, ≥1, default: 1) - Current member count
+- `total_members_lifetime` (INTEGER, ≥1, default: 1) - Historical member count
+- `created_at` / `updated_at` (TIMESTAMPTZ)
+
+#### `lazywars_empire_members`
+- `id` (UUID, PK)
+- `empire_id` (TEXT, FK to empires)
+- `wallet_address` (TEXT, FK to profiles)
+- `role` ('leader' | 'member', default: 'member')
+- `joined_at` (TIMESTAMPTZ)
+- `total_dues_paid` (INTEGER, ≥0, default: 0) - Lifetime dues contributions
+- `contribution_score` (INTEGER, ≥0, default: 0) - Member contribution tracking
+
+#### `lazywars_empire_invitations`
+- `id` (UUID, PK)
+- `empire_id` (TEXT, FK to empires)
+- `wallet_address` (TEXT, FK to profiles) - Invited player
+- `invited_by` (TEXT, FK to profiles) - Inviting member
+- `status` ('pending' | 'accepted' | 'declined', default: 'pending')
+- `invited_at` (TIMESTAMPTZ)
+- `expires_at` (TIMESTAMPTZ) - 7-day expiration
+
+#### `lazywars_empire_board`
+- `id` (UUID, PK)
+- `empire_id` (TEXT, FK to empires)
+- `author_wallet_address` (TEXT, FK to profiles)
+- `message` (TEXT, max 500 chars)
+- `posted_at` (TIMESTAMPTZ)
 
 ## Game Mechanics
 
@@ -185,6 +230,10 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
    - Updates tracking timestamps for efficiency
 2. **`hourly-income`** - Calculates OFModels income every hour
 3. **`turns-regeneration`** - Regenerates turns every 10 minutes
+4. **`empire-dues-collection`** - ✅ Automated Empire dues collection every hour
+   - Collects dues from member income based on empire dues_rate
+   - Updates member contribution tracking
+   - Maintains empire treasury balances
 
 ### Interactive Functions
 1. **`purchase`** - Handles shop item purchases
@@ -201,14 +250,33 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
    - **Desertion risk:** 10% chance if minions unhappy, lose 1-5 minions
    - **✅ Automatic EXP and level up processing (1 EXP per turn)**
 4. **`upgrade-farm`** - Farm equipment upgrades
-6. **`cure-fatness`** - ✅ Remove fatness penalty using gym membership
+5. **`cure-fatness`** - ✅ Remove fatness penalty using gym membership
    - Costs 1 gym_membership
    - Removes `is_fat` status
    - Auto-recalculates happiness after cure
-7. **`add-exp`** - ✅ Manual EXP addition with level up checks
+6. **`add-exp`** - ✅ Manual EXP addition with level up checks
    - Admin/special event EXP rewards
    - Automatic level and title updates
    - Level up notifications
+
+### Empire System Functions ✅
+7. **`create-empire`** - Empire creation with validation
+   - Level 3+ requirement check
+   - Name uniqueness validation
+   - Auto-adds creator as leader
+8. **`empire-invite`** - Send invitations to players
+   - Permission checks (leaders/members can invite)
+   - 7-day invitation expiration
+   - Duplicate invitation prevention
+9. **`empire-join`** - Accept invitations and join Empires
+   - Invitation validation and cleanup
+   - Member count limits (max 20)
+   - Profile updates with Empire bonuses
+10. **`empire-purchase-thugs`** - Purchase Empire thugs for combat bonuses
+    - Treasury balance validation
+    - Thug cost: 15,000 credits each
+    - Combat bonus updates for all members
+11. **`empire-dues-collection`** - Cron-based dues collection from member income
 
 ## SQL Functions
 
@@ -250,6 +318,19 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
 - `get_grow_upgrade_config(upgrade_level)` - Get upgrade configuration for specific level (name, cost, EXP req, yield bonus)
 - `get_player_grow_upgrade_info(wallet_address)` - Get current upgrade level, next upgrade info, and upgrade eligibility
 - `upgrade_grow_facility(wallet_address)` - Purchase next upgrade level with validation and purchase tracking
+
+### Empire System Functions ✅
+**Status: ✅ FULLY IMPLEMENTED**
+- `create_empire(name, description, wallet_address)` - Empire creation with level validation
+- `invite_to_empire(empire_id, wallet_address, invited_by)` - Send Empire invitations
+- `join_empire(invitation_id, wallet_address)` - Accept invitations and join Empire
+- `leave_empire(wallet_address)` - Leave current Empire with cleanup
+- `kick_empire_member(empire_id, member_wallet_address, kicker_wallet_address)` - Remove members (leaders only)
+- `purchase_empire_thugs(empire_id, thug_type, quantity, wallet_address)` - Buy offensive/defensive thugs
+- `collect_empire_dues(empire_id)` - Process dues collection from member income
+- `update_empire_bonuses(empire_id)` - Recalculate combat bonuses for all members
+- `get_empire_members(empire_id)` - Get Empire member list with profiles
+- `get_empire_invitations(wallet_address)` - Get pending invitations for player
 
 ### Analytics Functions
 - `get_total_credits_spent(wallet_address)` - Purchase analytics
@@ -314,6 +395,20 @@ GROW_UPGRADE_CONSTANTS = {
     "Cosmic Kush Kingdom"
   ]
 }
+
+EMPIRE_CONSTANTS = {
+  MIN_LEVEL_TO_CREATE: 3, // Block Besieger level required
+  MAX_MEMBERS: 20,
+  MIN_NAME_LENGTH: 3,
+  MAX_NAME_LENGTH: 30,
+  MAX_DESCRIPTION_LENGTH: 200,
+  MAX_DUES_RATE: 50, // 50% maximum
+  THUG_COST: 15000, // 15,000 credits per thug
+  THUG_ATTACK_BONUS: 10, // +10 attack per offensive thug
+  THUG_DEFENSE_BONUS: 10, // +10 defense per defensive thug
+  INVITATION_EXPIRY_DAYS: 7,
+  MAX_MESSAGE_LENGTH: 500,
+}
 ```
 
 ## Implementation Status
@@ -335,64 +430,75 @@ GROW_UPGRADE_CONSTANTS = {
 - **✅ Purchase system with analytics + upgrade purchase tracking**
 - **✅ Lazy score calculation and rankings**
 - **✅ Grow upgrades system with 10 levels and yield bonuses**
+- **✅ Empire system with alliance mechanics, treasury, and combat bonuses**
 
 ### ⚠️ Partially Implemented
-- Attack/defense mechanics (basic framework exists)
+- Attack/defense mechanics (basic framework exists, Empire bonuses implemented)
 
 ### ❌ Not Implemented
 - Advanced combat mechanics with happiness effects
-- Social features and guild systems
 - Achievement and quest systems
-
-## File Structure
-```
-supabase/
-├── schema.sql                           # Core database schema
-├── add-ofmodels-mechanics.sql          # OFModels system
-├── add-level-system.sql                # EXP/Level system
-├── add-inventory-columns.sql           # Shop items
-├── add-scout-mechanics.sql             # Scouting system
-├── add-grow-mechanics.sql              # Farming system
-├── add-turns-regeneration-function.sql # Turns system
-├── add-purchase-analytics.sql          # Purchase tracking
-├── add-complete-happiness-system.sql   # ✅ Complete happiness mechanics
-├── update-scout-with-happiness.sql     # ✅ Updated scout integration
-├── update-grow-with-happiness.sql      # ✅ Updated grow integration
-├── add-exp-title-system.sql            # ✅ EXP and titles system
-├── update-scout-grow-with-exp-system.sql # ✅ Scout/grow with automatic level ups
-├── fix-grow-to-original-spec.sql       # ✅ Corrected grow mechanics to match specification
-├── add-grow-upgrades-system.sql        # ✅ Grow upgrades system (10 levels, yield bonuses)
-├── update-grow-with-upgrades.sql       # ✅ Updated grow function with upgrade integration
-├── update-grow-upgrades-with-tracking.sql # ✅ Enhanced upgrade system with purchase tracking
-├── fix-turns-constraint-200.sql        # ✅ Ensure consistent 200 turns limit across environments
-├── functions/
-│   ├── hourly-income/index.ts          # Income generation
-│   ├── happiness-decay/index.ts        # ✅ Complete happiness processing
-│   ├── turns-regeneration/index.ts     # Turn regeneration
-│   ├── purchase/index.ts               # Shop purchases
-│   ├── scout/index.ts                  # Resource scouting
-│   ├── grow/index.ts                   # Weed growing
-│   ├── upgrade-farm/index.ts           # Farm upgrades
-│   ├── cure-fatness/index.ts           # ✅ Fatness cure function
-│   ├── add-exp/index.ts                # ✅ Manual EXP addition with level ups
-│   └── _shared/ofmodels-mechanics.ts   # Shared constants
-```
-
-## Next Implementation Priorities
-
-### ✅ COMPLETED SYSTEMS:
-1. Complete happiness system implementation
-2. Minions happiness mechanics with decay and desertion  
-3. Happiness integration in game actions (scout/grow)
-4. Fatness cure system with gym memberships
-5. Automated happiness processing via cron jobs
-6. EXP and Titles system with automatic level ups
-7. Grow upgrades system with 10 levels and yield bonuses
-8. Purchase tracking integration for upgrades
-9. Turns constraint consistency fix (200 max across all environments)
 
 ### 🔄 NEXT PRIORITIES:
 1. Advanced combat mechanics with happiness effects on battle outcomes
-2. Social features and player interactions
-3. Achievement and quest systems with EXP rewards
-4. Leaderboards with title-based rankings
+2. Achievement and quest systems with EXP rewards  
+3. Leaderboards with title-based rankings
+4. Empire message board and communication features
+
+## Empire System Implementation ✅
+
+### Overview
+The Empire system allows players to form alliances similar to PimpWars, providing mutual protection, shared resources, and coordinated attacks. This adds a significant social and strategic layer to LazyWars.
+
+### Key Features ✅ IMPLEMENTED
+- **Level Gate**: Level 3+ (Block Besieger) required to create Empires
+- **Member Limit**: Maximum 20 members per Empire
+- **Shared Resources**: Empire thugs (offensive/defensive) purchased with treasury
+- **Dues System**: Automatic collection from member earnings (0-50% rate)
+- **Combat Bonuses**: Empire thugs provide attack/defense bonuses to all members
+- **Invitation System**: 7-day expiring invitations for recruitment
+- **Member Management**: Leader controls for kicking members
+- **Treasury Management**: Shared credits for thug purchases
+
+### Database Schema ✅ DEPLOYED
+- **4 new tables**: `empires`, `empire_members`, `empire_invitations`, `empire_board`
+- **Profile integration**: Empire ID, combat bonuses, dues tracking
+- **Constraints**: Member limits, dues rates, name validation
+- **Triggers**: Auto-update empire scores and member counts
+
+### Backend Functions ✅ IMPLEMENTED
+- **Empire lifecycle**: Create, join, leave, invite, kick
+- **Treasury management**: Dues collection, thug purchases
+- **Combat integration**: Automatic bonus calculation and distribution
+- **Validation**: Level requirements, member limits, permission checks
+
+### Frontend Components ✅ IMPLEMENTED
+- **Complete UI**: Empire overview, creation, members, treasury tabs
+- **Responsive design**: Adapts to Empire status and user role
+- **Real-time updates**: State management for all Empire actions
+- **Role-based access**: Different UI for leaders vs members
+
+### Edge Functions ✅ DEPLOYED
+- `create-empire` - Empire creation with level validation
+- `empire-invite` - Send invitations with expiration
+- `empire-join` - Accept invitations and update bonuses
+- `empire-purchase-thugs` - Buy offensive/defensive thugs
+- `empire-dues-collection` - Automated cron for dues processing
+
+### Empire Constants
+- **Thug cost**: 15,000 credits each
+- **Attack/Defense bonus**: +10 per thug (applied to all members)
+- **Max dues rate**: 50% of member income
+- **Empire score**: Sum of all member lazy_scores
+- **Member limit**: 20 players maximum
+- **Level requirement**: Level 3+ (Block Besieger)
+
+### Implementation Status: ✅ FULLY COMPLETED
+- ✅ Database schema designed and deployed
+- ✅ Core SQL functions implemented and tested
+- ✅ Edge functions created and configured
+- ✅ React Native components fully functional
+- ✅ TypeScript types defined and integrated
+- ✅ Frontend page with tabbed navigation completed
+- ✅ Mock data integration for testing
+- ✅ State management and error handling implemented
