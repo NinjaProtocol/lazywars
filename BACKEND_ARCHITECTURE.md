@@ -4,12 +4,12 @@
 
 LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase.
 
-- **Maximum:** 200 turns (schema constraint verified and deployed ✅)
-- **Regeneration:** +2 turns every 10 minutes (cron job)
+- **Maximum:** 200 turns
+- **Regeneration:** +2 turns every 10 minutes
 - **Usage:** Scouting (yield affected by happiness), Growing (desertion risk)
 - **Tracking:** `last_turns_regen_at` timestamp for efficiency
 - **Analytics:** ✅ All turn spending tracked in `lazywars_turn_spending_history`
-- **Migration:** `fix-turns-constraint-200.sql` ensures consistent 200 limit across all environmentsnt, resource collection, and player progression.
+- **Migration:** ensures consistent 200 limit across all environmentsnt, resource collection, and player progression.
 
 ## Database Schema
 
