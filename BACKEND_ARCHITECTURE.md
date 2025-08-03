@@ -1,6 +1,7 @@
 # LazyWars Backend Architecture Documentation
 
 ## Overview
+
 LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase, featuring game mechanics for OFModels management, resource collection, and player progression.
 
 ## Database Schema
@@ -58,9 +59,10 @@ LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase,
 - `last_desertion_check_at` (TIMESTAMPTZ) - Desertion risk processing tracking
 - `grow_upgrade_level` (INTEGER, 1-10, default: 1) - Grow facility upgrade level
 - `empire_id` (TEXT, FK to empires) - Reference to current Empire
-- `empire_attack_bonus` (INTEGER, ≥0, default: 0) - Combat bonus from Empire thugs
-- `empire_defense_bonus` (INTEGER, ≥0, default: 0) - Combat bonus from Empire thugs
-- `last_dues_payment_at` (TIMESTAMPTZ) - Dues collection tracking
+- `empire_attack_bonus` (INTEGER, ≥0, default: 0) - Combat bonus from Empire minions
+- `empire_defense_bonus` (INTEGER, ≥0, default: 0) - Combat bonus from Empire minions
+- `credits_at_last_dues` (INTEGER, ≥0, default: 0) - Credits baseline for delta dues calculation
+- `total_dues_paid` (INTEGER, ≥0, default: 0) - Lifetime dues paid to Empire
 
 ### Support Table: `lazywars_purchase_history`
 - `id` (UUID, PK)
@@ -77,11 +79,12 @@ LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase,
 - `id` (TEXT, PK) - Empire identifier
 - `name` (TEXT, 3-30 chars, UNIQUE) - Empire name
 - `leader_wallet_address` (TEXT, FK to profiles) - Empire leader
+- `leader_username` (TEXT) - Leader username from profiles join (view only)
 - `description` (TEXT, optional, max 200 chars) - Empire description
 - `dues_rate` (INTEGER, 0-50, default: 0) - Member dues percentage
 - `treasury_credits` (INTEGER, ≥0, default: 0) - Shared treasury
-- `offensive_thugs` (INTEGER, ≥0, default: 0) - Attack bonuses
-- `defensive_thugs` (INTEGER, ≥0, default: 0) - Defense bonuses
+- `offensive_minions` (INTEGER, ≥0, default: 0) - Attack bonuses (renamed from thugs)
+- `defensive_minions` (INTEGER, ≥0, default: 0) - Defense bonuses (renamed from thugs)
 - `empire_score` (INTEGER, ≥0, default: 0) - Sum of member lazy_scores
 - `member_count` (INTEGER, ≥1, default: 1) - Current member count
 - `total_members_lifetime` (INTEGER, ≥1, default: 1) - Historical member count
@@ -230,10 +233,12 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
    - Updates tracking timestamps for efficiency
 2. **`hourly-income`** - Calculates OFModels income every hour
 3. **`turns-regeneration`** - Regenerates turns every 10 minutes
-4. **`empire-dues-collection`** - ✅ Automated Empire dues collection every hour
-   - Collects dues from member income based on empire dues_rate
-   - Updates member contribution tracking
-   - Maintains empire treasury balances
+4. **`empire-dues-collection`** - ✅ Delta-based Empire dues collection every 30 minutes
+   - **System:** Credit delta tracking (income since last collection)
+   - **Formula:** `(current_credits - credits_at_last_dues) × dues_rate%`
+   - **Performance:** Batch processing, atomic transactions per member
+   - **Coverage:** Captures all income sources (OFModels, scouting, combat, manual)
+   - **Interval:** 30 minutes (balanced performance vs responsiveness)
 
 ### Interactive Functions
 1. **`purchase`** - Handles shop item purchases
@@ -272,11 +277,14 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
    - Invitation validation and cleanup
    - Member count limits (max 20)
    - Profile updates with Empire bonuses
-10. **`empire-purchase-thugs`** - Purchase Empire thugs for combat bonuses
+10. **`empire-purchase-minions`** - Purchase Empire minions for combat bonuses
     - Treasury balance validation
-    - Thug cost: 15,000 credits each
+    - Minion cost: 15,000 credits each (renamed from thugs)
     - Combat bonus updates for all members
-11. **`empire-dues-collection`** - Cron-based dues collection from member income
+11. **`empire-dues-collection`** - ✅ Delta-based dues collection (30-min interval)
+    - Credit delta tracking system
+    - Atomic transactions with comprehensive error handling
+    - Performance monitoring and reporting
 
 ## SQL Functions
 
@@ -326,11 +334,22 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
 - `join_empire(invitation_id, wallet_address)` - Accept invitations and join Empire
 - `leave_empire(wallet_address)` - Leave current Empire with cleanup
 - `kick_empire_member(empire_id, member_wallet_address, kicker_wallet_address)` - Remove members (leaders only)
-- `purchase_empire_thugs(empire_id, thug_type, quantity, wallet_address)` - Buy offensive/defensive thugs
-- `collect_empire_dues(empire_id)` - Process dues collection from member income
-- `update_empire_bonuses(empire_id)` - Recalculate combat bonuses for all members
+- `purchase_empire_minions(leader_wallet_address, minion_type, quantity)` - Buy offensive/defensive minions (renamed from thugs)
+- `collect_empire_dues_delta()` - ✅ Delta-based dues collection with credit tracking
+- `migrate_to_delta_dues_system()` - Migration function for deploying new dues system
+- `update_empire_member_bonuses(empire_id)` - Recalculate combat bonuses for all members
 - `get_empire_members(empire_id)` - Get Empire member list with profiles
 - `get_empire_invitations(wallet_address)` - Get pending invitations for player
+
+### Delta-Based Dues Collection Functions ✅
+**Status: ✅ NEWLY IMPLEMENTED**
+- `collect_empire_dues_delta()` - Main delta-based collection function
+  - **Algorithm:** Credit delta tracking between collection cycles
+  - **Performance:** Batch processing with atomic member transactions
+  - **Error Handling:** Individual member failure isolation
+  - **Monitoring:** Comprehensive result tracking and reporting
+- `migrate_to_delta_dues_system()` - Safe migration from legacy system
+- **Performance View:** `empire_dues_performance` - Real-time dues projections
 
 ### Analytics Functions
 - `get_total_credits_spent(wallet_address)` - Purchase analytics
@@ -403,9 +422,9 @@ EMPIRE_CONSTANTS = {
   MAX_NAME_LENGTH: 30,
   MAX_DESCRIPTION_LENGTH: 200,
   MAX_DUES_RATE: 50, // 50% maximum
-  THUG_COST: 15000, // 15,000 credits per thug
-  THUG_ATTACK_BONUS: 10, // +10 attack per offensive thug
-  THUG_DEFENSE_BONUS: 10, // +10 defense per defensive thug
+  MINION_COST: 15000, // 15,000 credits per minion
+  MINION_ATTACK_BONUS: 10, // +10 attack per offensive minion
+  MINION_DEFENSE_BONUS: 10, // +10 defense per defensive minion
   INVITATION_EXPIRY_DAYS: 7,
   MAX_MESSAGE_LENGTH: 500,
 }
@@ -453,9 +472,9 @@ The Empire system allows players to form alliances similar to PimpWars, providin
 ### Key Features ✅ IMPLEMENTED
 - **Level Gate**: Level 3+ (Block Besieger) required to create Empires
 - **Member Limit**: Maximum 20 members per Empire
-- **Shared Resources**: Empire thugs (offensive/defensive) purchased with treasury
-- **Dues System**: Automatic collection from member earnings (0-50% rate)
-- **Combat Bonuses**: Empire thugs provide attack/defense bonuses to all members
+- **Shared Resources**: Empire minions (offensive/defensive) purchased with treasury
+- **Dues System**: ✅ Delta-based automatic collection from member income (0-50% rate)
+- **Combat Bonuses**: Empire minions provide attack/defense bonuses to all members
 - **Invitation System**: 7-day expiring invitations for recruitment
 - **Member Management**: Leader controls for kicking members
 - **Treasury Management**: Shared credits for thug purchases
@@ -468,7 +487,7 @@ The Empire system allows players to form alliances similar to PimpWars, providin
 
 ### Backend Functions ✅ IMPLEMENTED
 - **Empire lifecycle**: Create, join, leave, invite, kick
-- **Treasury management**: Dues collection, thug purchases
+- **Treasury management**: Dues collection, minion purchases
 - **Combat integration**: Automatic bonus calculation and distribution
 - **Validation**: Level requirements, member limits, permission checks
 
@@ -482,12 +501,12 @@ The Empire system allows players to form alliances similar to PimpWars, providin
 - `create-empire` - Empire creation with level validation
 - `empire-invite` - Send invitations with expiration
 - `empire-join` - Accept invitations and update bonuses
-- `empire-purchase-thugs` - Buy offensive/defensive thugs
+- `empire-purchase-thugs` - Buy offensive/defensive minions
 - `empire-dues-collection` - Automated cron for dues processing
 
 ### Empire Constants
-- **Thug cost**: 15,000 credits each
-- **Attack/Defense bonus**: +10 per thug (applied to all members)
+- **Minion cost**: 15,000 credits each
+- **Attack/Defense bonus**: +10 per minion (applied to all members)
 - **Max dues rate**: 50% of member income
 - **Empire score**: Sum of all member lazy_scores
 - **Member limit**: 20 players maximum
