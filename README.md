@@ -1,4 +1,4 @@
-# lazywars beta v0.1
+# lazywars beta v0.2
 
 The laziest dApp on Solana - A mobile game based on the classic pimpwars.
 
@@ -14,6 +14,7 @@ LazyWars is a Solana mobile dApp with a comprehensive backend featuring game mec
 - **Player Progression**: Experience points, levels, and ranking system
 - **City-Based Gameplay**: Choose from multiple cities (LA, NY, Miami, Dubai, Hong Kong)
 - **Farm System**: Hydroponic and LED upgrades for enhanced gameplay
+- **Empires**: Similar to alliance system in pimpwars
 
 ### Player Resources
 - **Credits**: Primary currency for purchases and upgrades
@@ -45,6 +46,11 @@ LazyWars is a Solana mobile dApp with a comprehensive backend featuring game mec
 - Happiness decays over time without proper management
 - Protection through minions or special items prevents decay
 - Various factors influence happiness levels
+
+### Empire System
+- Collect user-dues to build treasury
+- Hire offensive/defensive minions that grant bonuses
+- Alliance management and leaderboards
 
 ### Progression System
 - **Levels 1-10**: Progressive experience requirements
@@ -89,15 +95,15 @@ LazyWars is a Solana mobile dApp with a comprehensive backend featuring game mec
 - Player rankings
 - Enhanced happiness interaction systems
 - Exp and titles system
+- Expanded leaderboards/analytics
+- Enhanced social features (empires)
 
 ### 🚧 In Development
 
 - Attack/Defense mechanics
-- Research mechanics(?)
 
 ### 🔄 Planned Features
-- Expanded leaderboards/analytics
-- Enhanced social features
+
 - Additional cities and locations
 - More complex item interactions
 
