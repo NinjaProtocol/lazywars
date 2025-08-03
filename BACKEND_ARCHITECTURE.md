@@ -2,7 +2,8 @@
 
 ## Overview
 
-LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase, featuring game mechanics for OFModels ma### 4. Turns System
+LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase.
+
 - **Maximum:** 200 turns (schema constraint verified and deployed ✅)
 - **Regeneration:** +2 turns every 10 minutes (cron job)
 - **Usage:** Scouting (yield affected by happiness), Growing (desertion risk)
