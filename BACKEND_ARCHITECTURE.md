@@ -2,7 +2,13 @@
 
 ## Overview
 
-LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase, featuring game mechanics for OFModels management, resource collection, and player progression.
+LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase, featuring game mechanics for OFModels ma### 4. Turns System
+- **Maximum:** 200 turns (schema constraint verified and deployed ✅)
+- **Regeneration:** +2 turns every 10 minutes (cron job)
+- **Usage:** Scouting (yield affected by happiness), Growing (desertion risk)
+- **Tracking:** `last_turns_regen_at` timestamp for efficiency
+- **Analytics:** ✅ All turn spending tracked in `lazywars_turn_spending_history`
+- **Migration:** `fix-turns-constraint-200.sql` ensures consistent 200 limit across all environmentsnt, resource collection, and player progression.
 
 ## Database Schema
 
@@ -61,6 +67,7 @@ LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase,
 - `empire_id` (TEXT, FK to empires) - Reference to current Empire
 - `empire_attack_bonus` (INTEGER, ≥0, default: 0) - Combat bonus from Empire minions
 - `empire_defense_bonus` (INTEGER, ≥0, default: 0) - Combat bonus from Empire minions
+- `last_dues_payment_at` (TIMESTAMPTZ) - Last dues payment timestamp for delta tracking
 - `credits_at_last_dues` (INTEGER, ≥0, default: 0) - Credits baseline for delta dues calculation
 - `total_dues_paid` (INTEGER, ≥0, default: 0) - Lifetime dues paid to Empire
 
@@ -72,6 +79,17 @@ LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase,
 - `unit_cost` (INTEGER, >0) - Cost per unit
 - `total_cost` (INTEGER, >0) - Total transaction cost
 - `purchased_at` (TIMESTAMPTZ) - Purchase timestamp
+
+### Analytics Table: `lazywars_turn_spending_history` ✅
+- `id` (UUID, PK)
+- `wallet_address` (TEXT, FK to profiles) - Player identifier
+- `username` (TEXT) - Player username (for analytics)
+- `action_type` (TEXT) - Activity type ('scout' | 'grow')
+- `turns_spent` (INTEGER, >0) - Number of turns used
+- `yield_ofmodels` (INTEGER, default: 0) - OFModels gained (scout only)
+- `yield_minions` (INTEGER, default: 0) - Minions gained (scout only)
+- `yield_weed` (INTEGER, default: 0) - Weed gained (grow only)
+- `spent_at` (TIMESTAMPTZ) - Activity timestamp
 
 ### Empire System Tables ✅
 
@@ -107,6 +125,19 @@ LazyWars is a Solana mobile dApp with a comprehensive backend built on Supabase,
 - `status` ('pending' | 'accepted' | 'declined', default: 'pending')
 - `invited_at` (TIMESTAMPTZ)
 - `expires_at` (TIMESTAMPTZ) - 7-day expiration
+
+#### `lazywars_empire_join_requests` ✅ NEW
+- `id` (UUID, PK)
+- `empire_id` (TEXT, FK to empires) - Target empire
+- `requester_wallet_address` (TEXT, FK to profiles) - Requesting player
+- `requester_username` (TEXT) - Requester username
+- `status` ('pending' | 'approved' | 'denied', default: 'pending') - Request status
+- `created_at` (TIMESTAMPTZ) - Request timestamp
+- `updated_at` (TIMESTAMPTZ) - Last update timestamp
+- **Constraints:**
+  - Unique constraint on `empire_id + requester_wallet_address` for pending requests
+  - Global unique constraint on `requester_wallet_address` for pending requests (one request per player)
+  - Approved/denied requests are deleted from table after processing
 
 #### `lazywars_empire_board`
 - `id` (UUID, PK)
@@ -248,12 +279,14 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
    - Desertion risk during scouting
    - Real-time happiness calculation and updates
    - **✅ Automatic EXP and level up processing (1 EXP per turn)**
+   - **✅ Turn spending tracking with yield recording**
 3. **`grow`** - ✅ Weed growing with minion-based yield system
    - **Yield formula:** `minions × (1 + rng_adjustment)` (1-2 weed per minion)
    - **Efficiency scaling:** <15 turns = 30% penalty, 15+ turns = optimal
    - **Minion happiness affects yield:** <70% happiness = 50% reduction
    - **Desertion risk:** 10% chance if minions unhappy, lose 1-5 minions
    - **✅ Automatic EXP and level up processing (1 EXP per turn)**
+   - **✅ Turn spending tracking with yield recording**
 4. **`upgrade-farm`** - Farm equipment upgrades
 5. **`cure-fatness`** - ✅ Remove fatness penalty using gym membership
    - Costs 1 gym_membership
@@ -277,7 +310,12 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
    - Invitation validation and cleanup
    - Member count limits (max 20)
    - Profile updates with Empire bonuses
-10. **`empire-purchase-minions`** - Purchase Empire minions for combat bonuses
+10. **`empire-leave`** - ✅ Leave current Empire with member removal
+    - Leadership transfer to longest-serving member if leader leaves
+    - Empire disbanding when last member leaves
+    - Profile reset: empire_id, dues tracking, combat bonuses cleared
+    - Member count and empire score updates
+11. **`empire-purchase-minions`** - Purchase Empire minions for combat bonuses
     - Treasury balance validation
     - Minion cost: 15,000 credits each (renamed from thugs)
     - Combat bonus updates for all members
@@ -285,6 +323,16 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
     - Credit delta tracking system
     - Atomic transactions with comprehensive error handling
     - Performance monitoring and reporting
+12. **`empire-join-requests`** - ✅ NEW: Request-based joining system
+    - Request creation with eligibility validation
+    - Leader approval/denial workflow
+    - Cancel request functionality for requesters
+    - Automatic cleanup of processed requests
+    - Global constraint: one pending request per player
+13. **`kick-empire-member`** - ✅ Remove members from Empire (leaders only)
+    - Permission validation and member removal
+    - Profile cleanup and combat bonus updates
+    - Empire member count and score adjustments
 
 ## SQL Functions
 
@@ -332,7 +380,11 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
 - `create_empire(name, description, wallet_address)` - Empire creation with level validation
 - `invite_to_empire(empire_id, wallet_address, invited_by)` - Send Empire invitations
 - `join_empire(invitation_id, wallet_address)` - Accept invitations and join Empire
-- `leave_empire(wallet_address)` - Leave current Empire with cleanup
+- `leave_empire(wallet_address)` - ✅ Leave current Empire with comprehensive cleanup
+  - **Leadership transfer:** Auto-transfers to longest-serving member if leader leaves
+  - **Empire disbanding:** Deletes empire when last member leaves
+  - **Profile reset:** Clears empire_id, last_dues_payment_at, combat bonuses, credits_at_last_dues
+  - **Member management:** Removes from empire_members table and updates counts
 - `kick_empire_member(empire_id, member_wallet_address, kicker_wallet_address)` - Remove members (leaders only)
 - `purchase_empire_minions(leader_wallet_address, minion_type, quantity)` - Buy offensive/defensive minions (renamed from thugs)
 - `collect_empire_dues_delta()` - ✅ Delta-based dues collection with credit tracking
@@ -340,6 +392,19 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
 - `update_empire_member_bonuses(empire_id)` - Recalculate combat bonuses for all members
 - `get_empire_members(empire_id)` - Get Empire member list with profiles
 - `get_empire_invitations(wallet_address)` - Get pending invitations for player
+
+### Empire Join Request Functions ✅ NEW
+**Status: ✅ NEWLY IMPLEMENTED**
+- `can_request_to_join_empire(empire_id, wallet_address)` - Check join eligibility
+- `create_empire_join_request(empire_id, wallet_address, username)` - Create join request
+- `get_empire_join_requests(empire_id)` - Get pending requests for empire leaders
+- `process_empire_join_request(request_id, action, leader_wallet_address)` - Approve/deny requests
+- `cancel_empire_join_request(wallet_address)` - Cancel own pending request
+- **Key Features:**
+  - Global constraint: Only one pending request per player at a time
+  - Automatic eligibility validation (not already member, empire has space)
+  - Processed requests (approved/denied) are deleted from table
+  - Leader-only approval/denial with permission validation
 
 ### Delta-Based Dues Collection Functions ✅
 **Status: ✅ NEWLY IMPLEMENTED**
@@ -356,6 +421,16 @@ lazy_score = credits + (ofmodels * 2000) + (minions * 1000)
 - `get_player_purchase_stats(wallet_address)` - Detailed purchase stats
 - `get_upgrade_purchase_history(wallet_address)` - ✅ Upgrade-specific purchase history
 - `get_total_upgrade_spending(wallet_address)` - ✅ Total credits spent on upgrades
+
+### Turn Spending Analytics Functions ✅
+- `get_total_turns_spent(wallet_address)` - Total lifetime turns spent across all activities
+- `get_turns_spent_by_action(wallet_address, action_type)` - Turns spent by specific action ('scout'|'grow')
+- `get_player_turn_stats(wallet_address)` - Comprehensive turn spending statistics:
+  - Total turns spent, scout turns, grow turns
+  - Total activities performed, first/last activity timestamps
+  - Total yields (ofmodels, minions, weed) across all activities
+- `get_player_turn_history(wallet_address, limit)` - Recent turn spending history with yields
+- `lazywars_turn_analytics` - View combining turn spending with current player stats
 
 ## Database Triggers
 
@@ -447,9 +522,11 @@ EMPIRE_CONSTANTS = {
 - **✅ Scouting mechanics with happiness-based yields and risk**
 - **✅ Weed growing with minion-based yield system + upgrade bonuses**
 - **✅ Purchase system with analytics + upgrade purchase tracking**
+- **✅ Turn spending tracking and analytics for scout/grow activities**
 - **✅ Lazy score calculation and rankings**
 - **✅ Grow upgrades system with 10 levels and yield bonuses**
 - **✅ Empire system with alliance mechanics, treasury, and combat bonuses**
+- **✅ UI/UX consistency and design system (August 2025)**
 
 ### ⚠️ Partially Implemented
 - Attack/defense mechanics (basic framework exists, Empire bonuses implemented)
@@ -461,63 +538,5 @@ EMPIRE_CONSTANTS = {
 ### 🔄 NEXT PRIORITIES:
 1. Advanced combat mechanics with happiness effects on battle outcomes
 2. Achievement and quest systems with EXP rewards  
-3. Leaderboards with title-based rankings
-4. Empire message board and communication features
-
-## Empire System Implementation ✅
-
-### Overview
-The Empire system allows players to form alliances similar to PimpWars, providing mutual protection, shared resources, and coordinated attacks. This adds a significant social and strategic layer to LazyWars.
-
-### Key Features ✅ IMPLEMENTED
-- **Level Gate**: Level 3+ (Block Besieger) required to create Empires
-- **Member Limit**: Maximum 20 members per Empire
-- **Shared Resources**: Empire minions (offensive/defensive) purchased with treasury
-- **Dues System**: ✅ Delta-based automatic collection from member income (0-50% rate)
-- **Combat Bonuses**: Empire minions provide attack/defense bonuses to all members
-- **Invitation System**: 7-day expiring invitations for recruitment
-- **Member Management**: Leader controls for kicking members
-- **Treasury Management**: Shared credits for thug purchases
-
-### Database Schema ✅ DEPLOYED
-- **4 new tables**: `empires`, `empire_members`, `empire_invitations`, `empire_board`
-- **Profile integration**: Empire ID, combat bonuses, dues tracking
-- **Constraints**: Member limits, dues rates, name validation
-- **Triggers**: Auto-update empire scores and member counts
-
-### Backend Functions ✅ IMPLEMENTED
-- **Empire lifecycle**: Create, join, leave, invite, kick
-- **Treasury management**: Dues collection, minion purchases
-- **Combat integration**: Automatic bonus calculation and distribution
-- **Validation**: Level requirements, member limits, permission checks
-
-### Frontend Components ✅ IMPLEMENTED
-- **Complete UI**: Empire overview, creation, members, treasury tabs
-- **Responsive design**: Adapts to Empire status and user role
-- **Real-time updates**: State management for all Empire actions
-- **Role-based access**: Different UI for leaders vs members
-
-### Edge Functions ✅ DEPLOYED
-- `create-empire` - Empire creation with level validation
-- `empire-invite` - Send invitations with expiration
-- `empire-join` - Accept invitations and update bonuses
-- `empire-purchase-thugs` - Buy offensive/defensive minions
-- `empire-dues-collection` - Automated cron for dues processing
-
-### Empire Constants
-- **Minion cost**: 15,000 credits each
-- **Attack/Defense bonus**: +10 per minion (applied to all members)
-- **Max dues rate**: 50% of member income
-- **Empire score**: Sum of all member lazy_scores
-- **Member limit**: 20 players maximum
-- **Level requirement**: Level 3+ (Block Besieger)
-
-### Implementation Status: ✅ FULLY COMPLETED
-- ✅ Database schema designed and deployed
-- ✅ Core SQL functions implemented and tested
-- ✅ Edge functions created and configured
-- ✅ React Native components fully functional
-- ✅ TypeScript types defined and integrated
-- ✅ Frontend page with tabbed navigation completed
-- ✅ Mock data integration for testing
-- ✅ State management and error handling implemented
+3. Enhanced animation system and user experience polish
+4. Advanced leaderboards with filtering and search capabilities
