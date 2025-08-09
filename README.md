@@ -11,7 +11,7 @@ Build your lazy empire, recruit OnlyFans models and minions, form alliances, and
 ### Step 1: Download the APK
 
 1. **Visit the GitHub Repository**
-   - Go to: https://github.com/NinjaProtocol/lazywars/blob/main/lazywars-beta-v0.3.apk
+   - Go to: https://github.com/NinjaProtocol/lazywars/blob/main/releases/lazywars-beta-v0.3.apk
    - Click the ... button at the top right.
    - Download the latest APK file for Android
 
@@ -27,6 +27,10 @@ Build your lazy empire, recruit OnlyFans models and minions, form alliances, and
 3. Select your wallet app when prompted
 4. Approve the connection in your wallet app
 5. Choose a username (4-18 characters) or generate a random one
+
+### Step 3: Read Game Manual (Optional)
+
+https://github.com/NinjaProtocol/lazywars/blob/main/GAME_MANUAL.MD
 
 🎉 **You're ready to play!**
 
