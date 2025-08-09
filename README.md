@@ -30,7 +30,7 @@ Build your lazy empire, recruit OnlyFans models and minions, form alliances, and
 
 ### Step 3: Read Game Manual (Optional)
 
-https://github.com/NinjaProtocol/lazywars/blob/main/GAME_MANUAL.MD
+https://wars.hyperlazy.com/manual-guide/
 
 🎉 **You're ready to play!**
 
