@@ -1,14 +1,38 @@
-# lazywars-beta-v0.3
+# lazywars-beta-v0.3 - How to Play Guide
 
-A turn-based PVP mobile game on Solana, inspired by the classic game PimpWars. 
+Welcome to **LazyWars**, a turn-based PVP mobile game on Solana, inspired by the classic game PimpWars. 
 
 Build your lazy empire, recruit OnlyFans models and minions, form alliances, and dominate the leaderboards through strategic resource management and combat.
 
-## Game Overview
+---
 
-**LazyWars** is a satirical strategy game where players compete to build the most profitable empire through questionable business ventures. Set in various cities (LA, NY, Miami, Dubai, Hong Kong), players manage resources, happiness levels, and engage in PVP combat while climbing the lazy-score leaderboards.
+## 📱 Getting Started
 
-### Core Gameplay Loop
+### Step 1: Download the APK
+
+1. **Visit the GitHub Repository**
+   - Go to: https://github.com/NinjaProtocol/lazywars/blob/main/lazywars-beta-v0.3.apk
+   - Click the ... button at the top right.
+   - Download the latest APK file for Android
+
+2. **Install the APK**
+   - On your Android device, enable "Install from Unknown Sources" in Settings
+   - Open the downloaded APK file and install LazyWars
+   - Launch the app from your app drawer
+
+### Step 2: Connect Your Wallet to LazyWars
+
+1. Open LazyWars app
+2. Tap **"[ Connect ]"** on the main menu
+3. Select your wallet app when prompted
+4. Approve the connection in your wallet app
+5. Choose a username (4-18 characters) or generate a random one
+
+🎉 **You're ready to play!**
+
+---
+
+## Core Gameplay Loop
 
 1. **🔄 Turn Management** - Earn 2 turns every 10 minutes (max 200)
 2. **🔍 Scouting** - Spend turns to recruit OnlyFans models and minions
@@ -92,5 +116,7 @@ Build your lazy empire, recruit OnlyFans models and minions, form alliances, and
 - **Cosmetic NFTs** - Character customization and status symbols
 - **Battle Passes** - Seasonal progression rewards (planned)
 - **Premium Features** - Advanced statistics and automation (planned)
+
+---
 
 **Ready to build your lazy empire? Connect your Solana wallet and start recruiting! 🎉**
