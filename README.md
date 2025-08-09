@@ -11,9 +11,9 @@ Build your lazy empire, recruit OnlyFans models and minions, form alliances, and
 ### Step 1: Download the APK
 
 1. **Visit the GitHub Repository**
-   - Go to: https://github.com/NinjaProtocol/lazywars/blob/main/releases/lazywars-beta-v0.3.apk
-   - Click the ... button at the top right.
-   - Download the latest APK file for Android
+   - Go to: https://github.com/NinjaProtocol/lazywars/releases
+   - Click the latest release.
+   - Download the APK file under assets.
 
 2. **Install the APK**
    - On your Android device, enable "Install from Unknown Sources" in Settings
