@@ -4,6 +4,11 @@
 
 LazyWars is a blockchain-based idle gaming dApp built on the Solana network with a comprehensive backend system powered by Supabase. This document provides developers with a clear understanding of the backend architecture, game mechanics, and system design patterns without exposing sensitive security information.
 
+It was built publicly using Grok for research and initial framework, v0 for initial frontend designs, and agents using Sonnet/Opus created the initial codebase/structure.
+
+Public X Thread:
+https://x.com/adidogCEO/status/1949623428618580463
+
 ## Architecture Overview
 
 ### Technology Stack
