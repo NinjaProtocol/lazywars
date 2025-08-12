@@ -1,4 +1,4 @@
-# List of known bugs to be patched next version:
+# To be patched next update list:
 
 ## Known bugs
 - Grow exp currently giving double, may be further bugs
