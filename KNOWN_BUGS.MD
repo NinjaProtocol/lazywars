@@ -6,5 +6,6 @@
 - Leaderboard page not refreshing data without turning pages
 - Empire page not refreshing data on demand
 - Turn analytics data not live yet
+- Dashboard showing lazyrank not lazyscore rank
 
 Have a bug? report it on the forums(coming soon) or join the discord and open a ticket.
