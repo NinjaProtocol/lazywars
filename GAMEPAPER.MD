@@ -62,7 +62,6 @@ LazyWars is architected with a long-term vision to become a fully onchain game, 
 | **Real-time** | Supabase Realtime subscriptions |
 | **Authentication** | Solana wallet-based authentication |
 | **Scheduled Tasks** | Supabase Cron for automated game mechanics |
-| **Frontend** | Next.js 14 App Router with TypeScript |
 
 ## Database Schema
 
