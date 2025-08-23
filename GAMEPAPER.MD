@@ -1,4 +1,4 @@
-# LazyWars Backend System
+# lazywars-gamepaper.md
 
 ## Overview
 
