@@ -1,4 +1,4 @@
-# lazywars-beta-v0.3 - How to Play Guide
+# lazywars-beta-v0.4 - How to Play Guide
 
 Welcome to **LazyWars**, a turn-based PVP mobile game on Solana, inspired by the classic game PimpWars. 
 
@@ -6,7 +6,14 @@ Build your lazy empire, recruit OnlyFans models and minions, form alliances, and
 
 ---
 
-## 📱 Getting Started
+## Getting Started
+
+### Desktop
+
+1. **Login at lazywars-terminal**
+   - Go to: https://lazywars.com/
+
+### Mobile
 
 ### Step 1: Download the APK
 
@@ -23,7 +30,7 @@ Build your lazy empire, recruit OnlyFans models and minions, form alliances, and
 3. **Visit the Solana dApp Store** (Requires Solana Phone)
    - Go to the Solana Store on your Solana Phone.
    - Search for lazywars and install the latest version.
-   - Direct link to app: solanadappstore://details?id=com.anonymous.lazywarsmobile
+   - Direct link to app: (Being updated)
 
 ### Step 2: Connect Your Wallet to LazyWars
 
@@ -36,8 +43,6 @@ Build your lazy empire, recruit OnlyFans models and minions, form alliances, and
 ### Step 3: Read Game Manual (Optional)
 
 https://wars.hyperlazy.com/manual-guide/
-
-🎉 **You're ready to play!**
 
 ---
 
@@ -126,6 +131,4 @@ https://wars.hyperlazy.com/manual-guide/
 - **Battle Passes** - Seasonal progression rewards (planned)
 - **Premium Features** - Advanced statistics and automation (planned)
 
----
-
-**Ready to build your lazy empire? Connect your Solana wallet and start recruiting! 🎉**
+--
