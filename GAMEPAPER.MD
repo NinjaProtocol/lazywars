@@ -248,6 +248,4 @@ Final Income = Base × Happiness × Payout Adjustment
 
 ## Summary
 
-This backend system provides a robust, scalable foundation for the LazyWars gaming experience. The panel-based architecture creates an engaging terminal-style interface while the comprehensive backend handles complex game mechanics, empire systems, and player progression. 
-
 The future blockchain migration will ensure long-term decentralization and community ownership, making LazyWars a truly community-owned gaming platform where **the data is the game, and the game is the data**.
