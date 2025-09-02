@@ -42,7 +42,7 @@ Build your lazy empire, recruit OnlyFans models and minions, form alliances, and
 
 ### Step 3: Read Game Manual (Optional)
 
-https://wars.hyperlazy.com/manual-guide/
+https://lazywars.com/manual-guide/
 
 ---
 
