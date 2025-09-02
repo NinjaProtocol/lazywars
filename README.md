@@ -1,4 +1,4 @@
-# lazywars-beta - How to Play Guide
+# How to Play Guide
 
 Welcome to **LazyWars**, a turn-based PVP mobile game on Solana, inspired by the classic game PimpWars. 
 
