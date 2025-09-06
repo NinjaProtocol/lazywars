@@ -180,7 +180,7 @@ Final Income = Base × Happiness × Payout Adjustment
 | Activity | Cost | Description |
 |----------|------|-------------|
 | **Scout** | 1 turn | Recruit new minions and OFmodels |
-| **Grow** | 3+ turns | Generate weed and gain experience |
+| **Grow**  | 1 turn | Generate weed and gain experience |
 | **Attack** | 2 turns | Combat with other players |
 
 ### 6. 🏰 Empire System
