@@ -30,7 +30,7 @@ Build your lazy empire, recruit OnlyFans models and minions, form alliances, and
 3. **Visit the Solana dApp Store** (Requires Solana Phone)
    - Go to the Solana Store on your Solana Phone.
    - Search for lazywars and install the latest version.
-   - Direct link to app: (Being updated)
+   - Direct link to app: solanadappstore://details?id=com.hyperlazy.lazywarsmobile
 
 ### Step 2: Connect Your Wallet to LazyWars
 
