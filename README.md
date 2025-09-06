@@ -38,7 +38,7 @@ Build your lazy empire, recruit OnlyFans models and minions, form alliances, and
 2. Tap **"[ Connect ]"** on the main menu
 3. Select your wallet app when prompted
 4. Approve the connection in your wallet app
-5. Choose a username (4-18 characters) or generate a random one
+5. Choose a username (2-18 characters) or generate a random one
 
 ### Step 3: Read Game Manual (Optional)
 
