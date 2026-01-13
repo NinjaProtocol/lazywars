@@ -8,12 +8,12 @@ Build your lazy empire, recruit OnlyFans models and minions, form alliances, and
 
 ## Getting Started
 
-### Desktop
+### Desktop / Mobile (All devices)
 
 1. **Login at lazywars-terminal**
    - Go to: https://terminal.lazywars.com/
 
-### Mobile
+### Mobile (Anroid)
 
 ### Step 1: Download the APK
 
